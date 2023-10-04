@@ -1,0 +1,20 @@
+*.class
+
+
+# Package Files #
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+nbactions.xml
+
+target
+
+.idea
+*.iml
+*.log
+*.m
+*.R
+dependency-reduced-pom.xml
