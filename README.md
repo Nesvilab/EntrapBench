@@ -2,7 +2,7 @@
 Generate entrapment database and calculate false discovery proportion (FDP)
 
 ### Generate a target+entrapment database given a target database
-Given each protein in a target database, digest it, shuffle the peptides, and then put the peptides back into proteins. Each peptide is shuffled at most 10 times to get a unique sequence. Dependents on the parameter, one target protein can generate multiple entrapment proteins.
+Given each protein in a target database, digest it, shuffle the peptides, and then put the peptides back into proteins. Each peptide is shuffled at most 10 times to get a unique sequence. Depending on the parameter, one target protein can generate multiple entrapment proteins.
 
 Usage:
 ```shell
