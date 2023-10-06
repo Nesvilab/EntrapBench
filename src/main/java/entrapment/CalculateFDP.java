@@ -78,8 +78,8 @@ public class CalculateFDP {
     long targetProteinCount = 0;
     while ((line = reader.readLine()) != null) {
       line = line.trim();
-      if (line.startsWith(">")) {
-        if (line.contains(prefix + "_") && (decoyPrefix == null || !line.startsWith(">" + decoyPrefix))) {
+      if (line.startsWith(">") && (decoyPrefix == null || !line.startsWith(">" + decoyPrefix))) {
+        if (line.contains(prefix)) {
           ++entrapmentProteinCount;
         } else {
           ++targetProteinCount;
