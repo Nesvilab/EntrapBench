@@ -24,6 +24,8 @@ import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CalculateFDP {
 
@@ -55,15 +57,19 @@ public class CalculateFDP {
 
     try {
       double[] dbTE = getTargetEntrapmentProteins(fastaPath, decoyPrefix, prefix);
-      double[] targetEntrapmentPrecursors = diannParser(resultPath, prefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
+      double[] targetEntrapment = diannParser(resultPath, prefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
 
-      double fdp = (dbTE[0] * targetEntrapmentPrecursors[1]) / (dbTE[1] * targetEntrapmentPrecursors[0]);
+      double fdpPrecursor = (dbTE[0] * targetEntrapment[1]) / (dbTE[1] * targetEntrapment[0]);
+      double fdpProtein = (dbTE[0] * targetEntrapment[3]) / (dbTE[1] * targetEntrapment[2]);
 
       System.out.println("Target proteins in the database: " + dbTE[0]);
       System.out.println("Entrapment proteins in the database: " + dbTE[1]);
-      System.out.println("Target precursors: " + targetEntrapmentPrecursors[0]);
-      System.out.println("Entrapment precursors: " + targetEntrapmentPrecursors[1]);
-      System.out.println("FDP: " + (fdp * 100) + "%");
+      System.out.println("Target precursors: " + targetEntrapment[0]);
+      System.out.println("Entrapment precursors: " + targetEntrapment[1]);
+      System.out.println("Precursor-level FDP: " + (fdpPrecursor * 100) + "%");
+      System.out.println("Target proteins: " + targetEntrapment[2]);
+      System.out.println("Entrapment proteins: " + targetEntrapment[3]);
+      System.out.println("Protein-level FDP: " + (fdpProtein * 100) + "%");
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(1);
@@ -92,7 +98,8 @@ public class CalculateFDP {
   }
 
   private static double[] diannParser(Path resultPath, String prefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
-    long targetCount = 0, entrapmentCount = 0;
+    long targetPrecursorCount = 0, entrapmentPrecursorCount = 0;
+    Set<String> targetProteins = new HashSet<>(), entrapmentProteins = new HashSet<>();
     String line;
     BufferedReader reader = new BufferedReader(new FileReader(resultPath.toFile()));
     int pgColumnIdx = -1;
@@ -142,15 +149,17 @@ public class CalculateFDP {
             }
           }
           if (isEntrapment) {
-            ++entrapmentCount;
+            ++entrapmentPrecursorCount;
+            entrapmentProteins.add(pg);
           } else {
-            ++targetCount;
+            ++targetPrecursorCount;
+            targetProteins.add(pg);
           }
         }
       }
     }
     reader.close();
 
-    return new double[]{targetCount, entrapmentCount};
+    return new double[]{targetPrecursorCount, entrapmentPrecursorCount, targetProteins.size(), entrapmentProteins.size()};
   }
 }
