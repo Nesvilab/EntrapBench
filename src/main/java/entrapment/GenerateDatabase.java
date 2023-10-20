@@ -127,10 +127,10 @@ public class GenerateDatabase {
       }
     }
 
-    String[] decoyProteins = shuffleSeqFY(sequence.toString(), cutSites, protectSites, cleavageFromCTerm, N);
-    for (int i = 0; i < decoyProteins.length; ++i) {
+    String[] shuffledProteins = shuffleSeqFY(sequence.toString(), cutSites, protectSites, cleavageFromCTerm, N);
+    for (int i = 0; i < shuffledProteins.length; ++i) {
       writer.write(">" + part1 + "|" + appendPrefix(prefix, i, part2) + (part3 == null ? "" : "|" + appendPrefix(prefix, i, part3)) + (part4 == null ? "" : " " + replaceGN(prefix, i, part4)) + "\n");
-      writer.write(decoyProteins[i] + "\n");
+      writer.write(shuffledProteins[i] + "\n");
     }
   }
 
@@ -155,55 +155,55 @@ public class GenerateDatabase {
     Integer[] cutSiteArray = cutSiteSet.toArray(new Integer[0]);
     Arrays.sort(cutSiteArray);
 
-    StringBuilder[] decoyProteins = new StringBuilder[N];
+    StringBuilder[] shuffledProteins = new StringBuilder[N];
     for (int i = 0; i < N; ++i) {
-      decoyProteins[i] = new StringBuilder();
+      shuffledProteins[i] = new StringBuilder();
       if (sequence.startsWith("M")) {
-        decoyProteins[i].append("M");
+        shuffledProteins[i].append("M");
       }
     }
 
     int startIdx;
     int endIdx;
-    Set<String> generatedDecoys = new HashSet<>();
+    Set<String> generatedShuffles = new HashSet<>();
     for (int k = 0; k <= cutSiteArray.length; ++k) {
       startIdx = k == 0 ? 0 : cutSiteArray[k - 1] + 1;
       endIdx = k == cutSiteArray.length ? sequenceToBeShuffled.length() : cutSiteArray[k];
       if (endIdx - startIdx > 2) {
         String targetSequence = sequenceToBeShuffled.substring(startIdx, endIdx);
         char[] targetArray = targetSequence.toCharArray();
-        char[] decoyArray = new char[targetArray.length];
-        System.arraycopy(targetArray, 0, decoyArray, 0, targetArray.length);
-        generatedDecoys.clear();
+        char[] shuffleArray = new char[targetArray.length];
+        System.arraycopy(targetArray, 0, shuffleArray, 0, targetArray.length);
+        generatedShuffles.clear();
         for (int l = 0; l < N; ++l) {
           Random random = new Random(l);
-          String decoySequence;
+          String shuffledSequence;
           do {
-            for (int i = 0; i < decoyArray.length; ++i) {
-              int j = random.nextInt(decoyArray.length);
+            for (int i = 0; i < shuffleArray.length; ++i) {
+              int j = random.nextInt(shuffleArray.length);
               while (j == i) {
-                j = random.nextInt(decoyArray.length);
+                j = random.nextInt(shuffleArray.length);
               }
-              char temp = decoyArray[i];
-              decoyArray[i] = decoyArray[j];
-              decoyArray[j] = temp;
+              char temp = shuffleArray[i];
+              shuffleArray[i] = shuffleArray[j];
+              shuffleArray[j] = temp;
             }
-            decoySequence = String.valueOf(decoyArray);
+            shuffledSequence = String.valueOf(shuffleArray);
             ++time;
-          } while (time < 10 && (targetSequence.contentEquals(decoySequence) || generatedDecoys.contains(decoySequence)));
-          generatedDecoys.add(decoySequence);
-          decoyProteins[l].append(decoySequence).append(endIdx == sequenceToBeShuffled.length() ? "" : sequenceToBeShuffled.charAt(endIdx));
+          } while (time < 10 && (targetSequence.contentEquals(shuffledSequence) || generatedShuffles.contains(shuffledSequence)));
+          generatedShuffles.add(shuffledSequence);
+          shuffledProteins[l].append(shuffledSequence).append(endIdx == sequenceToBeShuffled.length() ? "" : sequenceToBeShuffled.charAt(endIdx));
         }
       } else {
         for (int l = 0; l < N; ++l) {
-          decoyProteins[l].append(sequenceToBeShuffled, startIdx, endIdx).append(endIdx == sequenceToBeShuffled.length() ? "" : sequenceToBeShuffled.charAt(endIdx));
+          shuffledProteins[l].append(sequenceToBeShuffled, startIdx, endIdx).append(endIdx == sequenceToBeShuffled.length() ? "" : sequenceToBeShuffled.charAt(endIdx));
         }
       }
     }
 
     String[] output = new String[N];
     for (int i = 0; i < N; ++i) {
-      output[i] = decoyProteins[i].toString();
+      output[i] = shuffledProteins[i].toString();
     }
 
     return output;

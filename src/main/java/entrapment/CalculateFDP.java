@@ -38,7 +38,7 @@ public class CalculateFDP {
 
     Path fastaPath = Paths.get(args[0]);
     String decoyPrefix = args[1].equals("null") ? null : args[1];
-    String prefix = args[2];
+    String entrapmentPrefix = args[2];
     Path resultPath = Paths.get(args[3]);
     double runPrecursorFdrT = Double.parseDouble(args[4]);
     double globalPrecursorFdrT = Double.parseDouble(args[5]);
@@ -56,8 +56,8 @@ public class CalculateFDP {
     }
 
     try {
-      double[] dbTE = getTargetEntrapmentProteins(fastaPath, decoyPrefix, prefix);
-      double[] targetEntrapment = diannParser(resultPath, prefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
+      double[] dbTE = getTargetEntrapmentProteins(fastaPath, decoyPrefix, entrapmentPrefix);
+      double[] targetEntrapment = diannParser(resultPath, entrapmentPrefix, decoyPrefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
 
       double fdpPrecursor = (dbTE[0] * targetEntrapment[1]) / (dbTE[1] * targetEntrapment[0]);
       double fdpProtein = (dbTE[0] * targetEntrapment[3]) / (dbTE[1] * targetEntrapment[2]);
@@ -77,7 +77,7 @@ public class CalculateFDP {
 
   }
 
-  private static double[] getTargetEntrapmentProteins(Path fastaPath, String decoyPrefix, String prefix) throws Exception {
+  private static double[] getTargetEntrapmentProteins(Path fastaPath, String decoyPrefix, String entrapmentPrefix) throws Exception {
     String line;
     BufferedReader reader = new BufferedReader(new FileReader(fastaPath.toFile()));
     long entrapmentProteinCount = 0;
@@ -85,7 +85,7 @@ public class CalculateFDP {
     while ((line = reader.readLine()) != null) {
       line = line.trim();
       if (line.startsWith(">") && (decoyPrefix == null || !line.startsWith(">" + decoyPrefix))) {
-        if (line.contains(prefix)) {
+        if (line.contains(entrapmentPrefix)) {
           ++entrapmentProteinCount;
         } else {
           ++targetProteinCount;
@@ -97,7 +97,7 @@ public class CalculateFDP {
     return new double[]{targetProteinCount, entrapmentProteinCount};
   }
 
-  private static double[] diannParser(Path resultPath, String prefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
+  private static double[] diannParser(Path resultPath, String entrapmentPrefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
     long targetPrecursorCount = 0, entrapmentPrecursorCount = 0;
     Set<String> targetProteins = new HashSet<>(), entrapmentProteins = new HashSet<>();
     String line;
@@ -143,7 +143,7 @@ public class CalculateFDP {
           String[] parts2 = pg.split(";");
           boolean isEntrapment = true;
           for (String p : parts2) {
-            if (!p.startsWith(prefix)) { // As long as there is a non-entrapment protein, it is not entrapment.
+            if (!p.startsWith(entrapmentPrefix)) { // As long as there is a non-entrapment protein, it is not an entrapment.
               isEntrapment = false;
               break;
             }
