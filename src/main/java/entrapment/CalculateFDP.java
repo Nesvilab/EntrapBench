@@ -31,19 +31,17 @@ public class CalculateFDP {
 
   public static void main(String[] args) {
     if (args.length != 8) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <decoy prefix> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>\n"
-          + "If there are no decoys in the fasta file, put null to the decoy prefix.");
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>");
       System.exit(1);
     }
 
     Path fastaPath = Paths.get(args[0]);
-    String decoyPrefix = args[1].equals("null") ? null : args[1];
-    String entrapmentPrefix = args[2];
-    Path resultPath = Paths.get(args[3]);
-    double runPrecursorFdrT = Double.parseDouble(args[4]);
-    double globalPrecursorFdrT = Double.parseDouble(args[5]);
-    double runPGFdrT = Double.parseDouble(args[6]);
-    double globalPGFdrT = Double.parseDouble(args[7]);
+    String entrapmentPrefix = args[1];
+    Path resultPath = Paths.get(args[2]);
+    double runPrecursorFdrT = Double.parseDouble(args[3]);
+    double globalPrecursorFdrT = Double.parseDouble(args[4]);
+    double runPGFdrT = Double.parseDouble(args[5]);
+    double globalPGFdrT = Double.parseDouble(args[6]);
 
     if (!Files.exists(fastaPath) || !Files.isReadable(fastaPath) || !Files.isRegularFile(fastaPath)) {
       System.out.println("The fasta file " + args[0] + " is not valid.");
@@ -56,13 +54,13 @@ public class CalculateFDP {
     }
 
     try {
-      Entry1 entry1 = getTargetEntrapmentProteins(fastaPath, decoyPrefix, entrapmentPrefix);
+      Entry1 entry1 = summaryEntrapments(fastaPath, entrapmentPrefix);
       Entry2 entry2 = diannParser(resultPath, entrapmentPrefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
 
-      double fdpPrecursor = (entry1.targetProteinCount * entry2.entrapmentPrecursorCount) / (entry1.entrapmentProteinCount * entry2.targetPrecursorCount);
-      double fdpProtein = (entry1.targetProteinCount * entry2.entrapmentProteinCount) / (entry1.entrapmentProteinCount * entry2.targetProteinCount);
+      double fdpPrecursor = (entry1.nonEntrapmentProteinCount * entry2.entrapmentPrecursorCount) / (entry1.entrapmentProteinCount * entry2.targetPrecursorCount);
+      double fdpProtein = (entry1.nonEntrapmentProteinCount * entry2.entrapmentProteinCount) / (entry1.entrapmentProteinCount * entry2.targetProteinCount);
 
-      System.out.println("Target proteins in the database: " + entry1.targetProteinCount);
+      System.out.println("Non-entrapment proteins in the database: " + entry1.nonEntrapmentProteinCount);
       System.out.println("Entrapment proteins in the database: " + entry1.entrapmentProteinCount);
       System.out.println();
       System.out.println("Precursor level:");
@@ -83,24 +81,24 @@ public class CalculateFDP {
 
   }
 
-  private static Entry1 getTargetEntrapmentProteins(Path fastaPath, String decoyPrefix, String entrapmentPrefix) throws Exception {
+  private static Entry1 summaryEntrapments(Path fastaPath, String entrapmentPrefix) throws Exception {
     String line;
     BufferedReader reader = new BufferedReader(new FileReader(fastaPath.toFile()));
     long entrapmentProteinCount = 0;
-    long targetProteinCount = 0;
+    long nonEntrapmentProteinCount = 0;
     while ((line = reader.readLine()) != null) {
       line = line.trim();
-      if (line.startsWith(">") && (decoyPrefix == null || !line.startsWith(">" + decoyPrefix))) {
+      if (line.startsWith(">")) {
         if (line.contains(entrapmentPrefix)) {
           ++entrapmentProteinCount;
         } else {
-          ++targetProteinCount;
+          ++nonEntrapmentProteinCount;
         }
       }
     }
     reader.close();
 
-    return new Entry1(targetProteinCount, entrapmentProteinCount);
+    return new Entry1(nonEntrapmentProteinCount, entrapmentProteinCount);
   }
 
   private static Entry2 diannParser(Path resultPath, String entrapmentPrefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
@@ -193,11 +191,11 @@ public class CalculateFDP {
 
   static class Entry1 {
 
-    final long targetProteinCount;
+    final long nonEntrapmentProteinCount;
     final long entrapmentProteinCount;
 
-    public Entry1(long targetProteinCount, long entrapmentProteinCount) {
-      this.targetProteinCount = targetProteinCount;
+    public Entry1(long nonEntrapmentProteinCount, long entrapmentProteinCount) {
+      this.nonEntrapmentProteinCount = nonEntrapmentProteinCount;
       this.entrapmentProteinCount = entrapmentProteinCount;
     }
   }
