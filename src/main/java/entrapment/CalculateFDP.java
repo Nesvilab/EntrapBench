@@ -30,7 +30,7 @@ import java.util.Set;
 public class CalculateFDP {
 
   public static void main(String[] args) {
-    if (args.length != 8) {
+    if (args.length != 7) {
       System.out.println("Usage: java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>");
       System.exit(1);
     }
@@ -57,23 +57,24 @@ public class CalculateFDP {
       Entry1 entry1 = summaryEntrapments(fastaPath, entrapmentPrefix);
       Entry2 entry2 = diannParser(resultPath, entrapmentPrefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
 
-      double fdpPrecursor = (entry1.nonEntrapmentProteinCount * entry2.entrapmentPrecursorCount) / (entry1.entrapmentProteinCount * entry2.targetPrecursorCount);
-      double fdpProtein = (entry1.nonEntrapmentProteinCount * entry2.entrapmentProteinCount) / (entry1.entrapmentProteinCount * entry2.targetProteinCount);
-
       System.out.println("Non-entrapment proteins in the database: " + entry1.nonEntrapmentProteinCount);
       System.out.println("Entrapment proteins in the database: " + entry1.entrapmentProteinCount);
       System.out.println();
-      System.out.println("Precursor level:");
-      System.out.println("Target: " + entry2.targetProteinCount);
-      System.out.println("Decoy: " + entry2.decoyPrecursorCount);
+      if (entry2.thereAreDecoyScoreLargerThanTargetScore) {
+        System.out.println("WARNING: There are decoy scores larger than target scores.");
+      }
+      System.out.println("Precursor level filtered with " + runPrecursorFdrT + " run q-value and " + globalPrecursorFdrT + " global q-value:");
+      System.out.println("Target: " + entry2.targetPrecursorCount);
+      System.out.println("Decoy (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry2.decoyPrecursorCount);
       System.out.println("Entrapment: " + entry2.entrapmentPrecursorCount);
-      System.out.println("Decoy entrapment: " + entry2.decoyEntrapmentPrecursorCount);
-      System.out.println("FDP: " + (fdpPrecursor * 100) + "%");
+      System.out.println("Decoy entrapment (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry2.decoyEntrapmentPrecursorCount);
+      System.out.println("(ND + ET) / (NT + ET) (not accurate because DIA-NN does not report all ND and the ND are not FDR filtered): " + ((entry2.decoyPrecursorCount + entry2.entrapmentPrecursorCount) * 100.0 / (entry2.targetPrecursorCount + entry2.entrapmentPrecursorCount)) + "%");
+      System.out.println("ET / (NT + ET): " + (entry2.entrapmentPrecursorCount * 100.0 / (entry2.targetPrecursorCount + entry2.entrapmentPrecursorCount)) + "%");
       System.out.println();
-      System.out.println("Protein level:");
+      System.out.println("Protein level filtered with " + runPGFdrT + " run q-value and " + globalPGFdrT + " global q-value:");
       System.out.println("Target: " + entry2.targetProteinCount);
       System.out.println("Entrapment: " + entry2.entrapmentProteinCount);
-      System.out.println("FDP: " + (fdpProtein * 100) + "%");
+      System.out.println("ET / (NT + ET): " + (entry2.entrapmentProteinCount * 100.0 / (entry2.targetProteinCount + entry2.entrapmentProteinCount)) + "%");
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(1);
@@ -103,9 +104,10 @@ public class CalculateFDP {
 
   private static Entry2 diannParser(Path resultPath, String entrapmentPrefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
     long targetPrecursorCount = 0, entrapmentPrecursorCount = 0, decoyPrecursorCount = 0, decoyEntrapmentPrecursorCount = 0;
-    Set<String> targetProteins = new HashSet<>(), entrapmentProteins = new HashSet<>(); // Count non-redundant proteins. The same protein from multiple runs is counted only once.
+    Set<String> targetProteins = new HashSet<>(), entrapmentProteins = new HashSet<>();
     String line;
     BufferedReader reader = new BufferedReader(new FileReader(resultPath.toFile()));
+    int runColumnIdx = -1;
     int pgColumnIdx = -1;
     int cscoreColumnIdx = -1;
     int decoyCscoreColumnIdx = -1;
@@ -113,6 +115,8 @@ public class CalculateFDP {
     int globalPrecursorFdrColumnIdx = -1;
     int runPGFdrColumnIdx = -1;
     int globalPGFdrColumnIdx = -1;
+    boolean thereAreDecoyScoreLargerThanTargetScore = false;
+
     while ((line = reader.readLine()) != null) {
       line = line.trim();
       if (line.isEmpty()) {
@@ -122,7 +126,9 @@ public class CalculateFDP {
       String[] parts = line.split("\t");
       if (line.startsWith("File.Name")) {
         for (int i = 0; i < parts.length; ++i) {
-          if (parts[i].trim().equalsIgnoreCase("Protein.Group")) {
+          if (parts[i].trim().equalsIgnoreCase("Run")) {
+            runColumnIdx = i;
+          } else if (parts[i].trim().equalsIgnoreCase("Protein.Group")) {
             pgColumnIdx = i;
           } else if (parts[i].trim().equalsIgnoreCase("CScore")) {
             cscoreColumnIdx = i;
@@ -138,11 +144,12 @@ public class CalculateFDP {
             globalPGFdrColumnIdx = i;
           }
         }
-        if (pgColumnIdx < 0 || cscoreColumnIdx < 0 || decoyCscoreColumnIdx < 0 || runPrecursorFdrColumnIdx < 0 || globalPrecursorFdrColumnIdx < 0 || runPGFdrColumnIdx < 0 || globalPGFdrColumnIdx < 0) {
+        if (runColumnIdx < 0 || pgColumnIdx < 0 || cscoreColumnIdx < 0 || decoyCscoreColumnIdx < 0 || runPrecursorFdrColumnIdx < 0 || globalPrecursorFdrColumnIdx < 0 || runPGFdrColumnIdx < 0 || globalPGFdrColumnIdx < 0) {
           System.out.println("Some columns are missing in the result file: " + resultPath.toAbsolutePath());
           System.exit(1);
         }
       } else {
+        String run = parts[runColumnIdx].trim();
         String pg = parts[pgColumnIdx].trim();
         double cscore = Double.parseDouble(parts[cscoreColumnIdx]);
         double decoyCscore = Double.parseDouble(parts[decoyCscoreColumnIdx]);
@@ -152,40 +159,44 @@ public class CalculateFDP {
         double globalPGFdr = Double.parseDouble(parts[globalPGFdrColumnIdx]);
 
         if (cscore <= decoyCscore) {
-          System.out.println("There is a precursor with a CScore no better than the decoy CScore:\n" + line);
+          thereAreDecoyScoreLargerThanTargetScore = true;
         }
 
-        if (runPrecursorFdr < runPrecursorFdrT && globalPrecursorFdr < globalPrecursorFdrT && runPGFdr < runPGFdrT && globalPGFdr < globalPGFdrT) {
-          String[] parts2 = pg.split(";");
-          boolean isEntrapment = true;
-          for (String p : parts2) {
-            if (!p.startsWith(entrapmentPrefix)) { // As long as there is a non-entrapment protein, it is not an entrapment.
-              isEntrapment = false;
-              break;
+        String[] parts2 = pg.split(";");
+        boolean isEntrapment = true;
+        for (String p : parts2) {
+          if (!p.contains(entrapmentPrefix)) { // As long as there is a non-entrapment protein, it is not an entrapment.
+            isEntrapment = false;
+            break;
+          }
+        }
+
+        if (runPrecursorFdr < runPrecursorFdrT && globalPrecursorFdr < globalPrecursorFdrT) {
+          if (isEntrapment) {
+            ++entrapmentPrecursorCount;
+            if (decoyCscore > 0) {
+              ++decoyEntrapmentPrecursorCount;
+            }
+          } else {
+            ++targetPrecursorCount;
+            if (decoyCscore > 0) {
+              ++decoyPrecursorCount;
             }
           }
+        }
 
+        if (runPGFdr < runPGFdrT && globalPGFdr < globalPGFdrT) {
           if (isEntrapment) {
-            if (decoyCscore > cscore) {
-              ++decoyEntrapmentPrecursorCount;
-            } else {
-              ++entrapmentPrecursorCount;
-            }
-            entrapmentProteins.add(pg);
+            entrapmentProteins.add(run + "_" + pg);
           } else {
-            if (decoyCscore > cscore) {
-              ++decoyPrecursorCount;
-            } else {
-              ++targetPrecursorCount;
-            }
-            targetProteins.add(pg);
+            targetProteins.add(run + "_" + pg);
           }
         }
       }
     }
     reader.close();
 
-    return new Entry2(targetPrecursorCount, decoyPrecursorCount, entrapmentPrecursorCount, decoyEntrapmentPrecursorCount, targetProteins.size(), entrapmentProteins.size());
+    return new Entry2(targetPrecursorCount, decoyPrecursorCount, entrapmentPrecursorCount, decoyEntrapmentPrecursorCount, targetProteins.size(), entrapmentProteins.size(), thereAreDecoyScoreLargerThanTargetScore);
   }
 
 
@@ -209,14 +220,16 @@ public class CalculateFDP {
     final double decoyEntrapmentPrecursorCount;
     final double targetProteinCount;
     final double entrapmentProteinCount;
+    final boolean thereAreDecoyScoreLargerThanTargetScore;
 
-    public Entry2(double targetPrecursorCount, double decoyPrecursorCount, double entrapmentPrecursorCount, double decoyEntrapmentPrecursorCount, double targetProteinCount, double entrapmentProteinCount) {
+    public Entry2(double targetPrecursorCount, double decoyPrecursorCount, double entrapmentPrecursorCount, double decoyEntrapmentPrecursorCount, double targetProteinCount, double entrapmentProteinCount, boolean thereAreDecoyScoreLargerThanTargetScore) {
       this.targetPrecursorCount = targetPrecursorCount;
       this.decoyPrecursorCount = decoyPrecursorCount;
       this.entrapmentPrecursorCount = entrapmentPrecursorCount;
       this.decoyEntrapmentPrecursorCount = decoyEntrapmentPrecursorCount;
       this.targetProteinCount = targetProteinCount;
       this.entrapmentProteinCount = entrapmentProteinCount;
+      this.thereAreDecoyScoreLargerThanTargetScore = thereAreDecoyScoreLargerThanTargetScore;
     }
   }
 }
