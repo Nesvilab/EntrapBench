@@ -21,8 +21,8 @@ _Disclaimer: The equation may be slightly different depending on different targe
 
 Usage:
 ```shell
-java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <decoy prefix> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>
-Example: java -cp EntrapBench.jar entrapment.CalculateFDP uniprot_human.fasta null entrapment diann-output/report.tsv 0.01 0.01 0.01 0.01
+java -cp EntrapBench.jar entrapment.CalculateDiannFDPnnFDP <fasta file path> <decoy prefix> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>
+Example: java -cp EntrapBench.jar entrapment.CalculateDiannFDPnnFDP uniprot_human.fasta null entrapment diann-output/report.tsv 0.01 0.01 0.01 0.01
 ```
 
 __Note:__ the "target" here is different from the term "target" in the target-decoy database searching approach. To use this target+entrapment database in the target-decoy approach, need to generate decoy proteins for both target and entrapment proteins.
