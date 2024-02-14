@@ -44,7 +44,7 @@ public class GenerateDatabase {
       System.exit(1);
     }
 
-    Path fastaPath = Paths.get(args[0]);
+    Path fastaPath = Paths.get(args[0]).toAbsolutePath();
     String cutSites = args[1];
     String protectSites = args[2];
     boolean cleavageFromCTerm = args[3].contentEquals("1");
