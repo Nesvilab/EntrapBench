@@ -6,8 +6,8 @@ Given each protein in a target database, digest it, shuffle the peptides, and th
 
 Usage:
 ```shell
-java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix>
-Example: java -cp EntrapBench.jar entrapment.GenerateDatabase uniprot_human.fasta KR P 1 10 entrapment # Each target protein generates 10 shuffled entrapment proteins.
+java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix> <add prefix>
+Example: java -cp EntrapBench.jar entrapment.GenerateDatabase uniprot_human.fasta KR P 1 10 entrapment 0 # Each target protein generates 10 shuffled entrapment proteins.
 ```
 
 ### Calculate false discovery proportion (FDP)
