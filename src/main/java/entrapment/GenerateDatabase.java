@@ -39,8 +39,8 @@ public class GenerateDatabase {
   private static final Pattern pattern2 = Pattern.compile("GN=([^ ]+)");
 
   public static void main(String[] args) {
-    if (args.length != 6) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix>");
+    if (args.length != 7) {
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix> <add prefix>");
       System.exit(1);
     }
 
@@ -50,6 +50,7 @@ public class GenerateDatabase {
     boolean cleavageFromCTerm = args[3].contentEquals("1");
     int N = 10;
     String prefix = args[5];
+    boolean addPrefix = args[6].contentEquals("1");
 
     try {
       N = Integer.parseInt(args[4]);
@@ -79,7 +80,7 @@ public class GenerateDatabase {
 
         if (line.startsWith(">")) {
           if (sequence.length() > 0) {
-            writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix);
+            writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix, addPrefix);
           }
           sequence = new StringBuilder();
           header = line.substring(1);
@@ -89,7 +90,7 @@ public class GenerateDatabase {
       }
 
       if (sequence.length() > 0) {
-        writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix);
+        writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix, addPrefix);
       }
 
       reader.close();
@@ -101,7 +102,7 @@ public class GenerateDatabase {
 
   }
 
-  private static void writeProtein(BufferedWriter writer, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, String prefix) throws Exception {
+  private static void writeProtein(BufferedWriter writer, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, String prefix, boolean addPrefix) throws Exception {
     writer.write(">" + header + "\n");
     writer.write(sequence + "\n");
 
@@ -129,7 +130,7 @@ public class GenerateDatabase {
 
     String[] shuffledProteins = shuffleSeqFY(sequence.toString(), cutSites, protectSites, cleavageFromCTerm, N);
     for (int i = 0; i < shuffledProteins.length; ++i) {
-      writer.write(">" + part1 + "|" + appendPrefix(prefix, i, part2) + (part3 == null ? "" : "|" + appendPrefix(prefix, i, part3)) + (part4 == null ? "" : " " + replaceGN(prefix, i, part4)) + "\n");
+      writer.write(">" + (addPrefix ? appendPrefix(prefix, i, part1) : part1) + "|" + appendPrefix(prefix, i, part2) + (part3 == null ? "" : "|" + appendPrefix(prefix, i, part3)) + (part4 == null ? "" : " " + replaceGN(prefix, i, part4)) + "\n");
       writer.write(shuffledProteins[i] + "\n");
     }
   }
