@@ -11,18 +11,27 @@ Example: java -cp EntrapBench.jar entrapment.GenerateDatabase uniprot_human.fast
 ```
 
 ### Calculate false discovery proportion (FDP)
-Given a target+entrapment database and DIA-NN's `report.tsv`, calculate the false discovery proportion using the equation
+Given a target+entrapment database and DIA-NN's `report.tsv`, calculate the false discovery proportion related estimations using the equations in [Wen et al. (2024)](https://doi.org/10.1101/2024.06.01.596967)
 
-$$FDP = \frac{T \times e}{E \times t}$$
+"combined" method: $$FDP = \frac{E \times (1 + 1/r)}{T + E}$$
 
-where $T$ is the number of target proteins in the database, $E$ is the number of entrapment proteins in the database, $t$ is the number of target precursors in the result, and $e$ is the number of entrapment precursors in the result.
+Lower bound: $$FDP = \frac{E}{T + E}$$
 
-_Disclaimer: The equation may be slightly different depending on different target-decoy approaches and the interpretations of the false matches. The equation listed above is the one I could find from the literature._
+"sample" method: $$FDP = \frac{E \times (1/r)}{T}$$
+
+where $T$ is the number of target proteins/precursors in the result, $E$ is the number of entrapment proteins/precursors in the result, $r$ is the ratio of entrapment and target proteins in the database.
+
+`_Disclaimer: The equation may be slightly different depending on different target-decoy approaches and the interpretations of the false matches._`
 
 Usage:
 ```shell
-java -cp EntrapBench.jar entrapment.CalculateDiannFDPnnFDP <fasta file path> <decoy prefix> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>
-Example: java -cp EntrapBench.jar entrapment.CalculateDiannFDPnnFDP uniprot_human.fasta null entrapment diann-output/report.tsv 0.01 0.01 0.01 0.01
+java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>
+Example: java -cp EntrapBench.jar entrapment.CalculateFDP uniprot_human.fasta entrapment report.tsv 0.01 0.01 0.01 0.01
 ```
 
-__Note:__ the "target" here is different from the term "target" in the target-decoy database searching approach. To use this target+entrapment database in the target-decoy approach, need to generate decoy proteins for both target and entrapment proteins.
+```shell
+java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue <entrapment prefix> <entrapment to target ratio> <run-wise precursor q-value threshold> <global precursor q-value threshold> <run-wise protein q-value threshold> <global protein q-value threshold> <result file path> <output file path>
+Example: java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue entrapment 1 0.01 0.01 0.01 0.01 report.tsv entrapment_q_values.csv
+```
+
+__Note:__ the "target" here is different from the term "target" in the target-decoy database searching approach. To use this target+entrapment database in the target-decoy approach, need to generate decoy proteins (beforehand or on-the-fly by the tool itself) for both target and entrapment proteins.

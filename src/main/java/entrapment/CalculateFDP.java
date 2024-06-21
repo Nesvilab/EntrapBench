@@ -56,9 +56,11 @@ public class CalculateFDP {
     try {
       Entry1 entry1 = summaryEntrapments(fastaPath, entrapmentPrefix);
       Entry2 entry2 = diannParser(resultPath, entrapmentPrefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
+      double r = (double) entry1.entrapmentProteinCount / (double) entry1.nonEntrapmentProteinCount;
 
       System.out.println("Non-entrapment proteins in the database: " + entry1.nonEntrapmentProteinCount);
       System.out.println("Entrapment proteins in the database: " + entry1.entrapmentProteinCount);
+      System.out.println("r: " + r);
       System.out.println();
       if (entry2.thereAreDecoyScoreLargerThanTargetScore) {
         System.out.println("WARNING: There are decoy scores larger than target scores.");
@@ -68,13 +70,16 @@ public class CalculateFDP {
       System.out.println("Decoy (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry2.decoyPrecursorCount);
       System.out.println("Entrapment: " + entry2.entrapmentPrecursorCount);
       System.out.println("Decoy entrapment (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry2.decoyEntrapmentPrecursorCount);
-      System.out.println("(ND + ET) / (NT + ET) (not accurate because DIA-NN does not report all ND and the ND are not FDR filtered): " + ((entry2.decoyPrecursorCount + entry2.entrapmentPrecursorCount) * 100.0 / (entry2.targetPrecursorCount + entry2.entrapmentPrecursorCount)) + "%");
+      System.out.println("ET * (1 + 1/r) / (NT + ET): " + (entry2.entrapmentPrecursorCount * (1 + 1 / r) * 100.0 / (entry2.targetPrecursorCount + entry2.entrapmentPrecursorCount)) + "%");
       System.out.println("ET / (NT + ET): " + (entry2.entrapmentPrecursorCount * 100.0 / (entry2.targetPrecursorCount + entry2.entrapmentPrecursorCount)) + "%");
+      System.out.println("ET * (1/r) / NT: " + (entry2.entrapmentPrecursorCount * (1 / r) * 100.0 / entry2.targetPrecursorCount) + "%");
       System.out.println();
       System.out.println("Protein level filtered with " + runPGFdrT + " run q-value and " + globalPGFdrT + " global q-value:");
       System.out.println("Target: " + entry2.targetProteinCount);
       System.out.println("Entrapment: " + entry2.entrapmentProteinCount);
+      System.out.println("ET * (1 + 1/r) / (NT + ET): " + (entry2.entrapmentProteinCount * (1 + 1 / r) * 100.0 / (entry2.targetProteinCount + entry2.entrapmentProteinCount)) + "%");
       System.out.println("ET / (NT + ET): " + (entry2.entrapmentProteinCount * 100.0 / (entry2.targetProteinCount + entry2.entrapmentProteinCount)) + "%");
+      System.out.println("ET * (1/r) / NT: " + (entry2.entrapmentProteinCount * (1 / r) * 100.0 / entry2.targetProteinCount) + "%");
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(1);

@@ -34,18 +34,19 @@ public class DiannEntrapmentQValue {
   private static final double binSize = 0.0000001;
 
   public static void main(String[] args) {
-    if (args.length != 7) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue <entrapment prefix> <run-wise precursor q-value threshold> <global precursor q-value threshold> <run-wise protein q-value threshold> <global protein q-value threshold> <result file path> <output file path>\n");
+    if (args.length != 8) {
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue <entrapment prefix> <entrapment to target ratio> <run-wise precursor q-value threshold> <global precursor q-value threshold> <run-wise protein q-value threshold> <global protein q-value threshold> <result file path> <output file path>\n");
       System.exit(1);
     }
 
     String entrapmentPrefix = args[0];
-    double runPrecursorQValueT = Double.parseDouble(args[1]);
-    double globalPrecursorQValueT = Double.parseDouble(args[2]);
-    double runPGQValueT = Double.parseDouble(args[3]);
-    double globalPGQValueT = Double.parseDouble(args[4]);
-    Path resultPath = Paths.get(args[5]);
-    Path outputPath = Paths.get(args[6]);
+    double r = Double.parseDouble(args[1]);
+    double runPrecursorQValueT = Double.parseDouble(args[2]);
+    double globalPrecursorQValueT = Double.parseDouble(args[3]);
+    double runPGQValueT = Double.parseDouble(args[4]);
+    double globalPGQValueT = Double.parseDouble(args[5]);
+    Path resultPath = Paths.get(args[6]);
+    Path outputPath = Paths.get(args[7]);
 
     if (!Files.exists(resultPath) || !Files.isWritable(resultPath) || !Files.isRegularFile(resultPath)) {
       System.out.println("The result file " + args[1] + " is not valid.");
@@ -70,8 +71,9 @@ public class DiannEntrapmentQValue {
       System.out.println("Decoy (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry.reportedDecoyPrecursorCount);
       System.out.println("Entrapment: " + entry.reportedEntrapmentPrecursorCount);
       System.out.println("Entrapment decoy (not accurate because DIA-NN does not report all decoys and the decoys are not FDR filtered): " + entry.reportedEntrapmentDecoyPrecursorCount);
-      System.out.println("(ND + ET) / (NT + ET) (not accurate because DIA-NN does not report all ND and the ND are not FDR filtered): " + ((entry.reportedDecoyPrecursorCount + entry.reportedEntrapmentPrecursorCount) * 100.0 / (entry.reportedTargetPrecursorCount + entry.reportedEntrapmentPrecursorCount)) + "%");
+      System.out.println("ET * (1 + 1/r) / (NT + ET): " + (entry.reportedEntrapmentPrecursorCount * (1 + 1 / r) * 100.0 / (entry.reportedTargetPrecursorCount + entry.reportedEntrapmentPrecursorCount)) + "%");
       System.out.println("ET / (NT + ET): " + (entry.reportedEntrapmentPrecursorCount * 100.0 / (entry.reportedTargetPrecursorCount + entry.reportedEntrapmentPrecursorCount)) + "%");
+      System.out.println("ET * (1/r) / NT: " + (entry.reportedEntrapmentPrecursorCount * (1 / r) * 100.0 / entry.reportedTargetPrecursorCount) + "%");
       System.out.println("DIA-NN reported " + (entry.reportedTargetPrecursorCount + entry.reportedEntrapmentPrecursorCount) + " precursors.");
       System.out.println("With global entrapment q-value (ET / (NT + ET)) threshold = " + (Math.min(runPrecursorQValueT, globalPrecursorQValueT) * 100) + "%, there are " + entry.entrapmentQValueFilteredPrecursorCount + " precursors.");
 
@@ -79,7 +81,9 @@ public class DiannEntrapmentQValue {
       System.out.println("Protein level filtered with " + runPGQValueT + " run q-value and " + globalPGQValueT + " global q-value:");
       System.out.println("Target: " + entry.targetProteinCount);
       System.out.println("Entrapment: " + entry.entrapmentProteinCount);
+      System.out.println("ET * (1 + 1/r) / (NT + ET): " + (entry.entrapmentProteinCount * (1 + 1 / r) * 100.0 / (entry.targetProteinCount + entry.entrapmentProteinCount)) + "%");
       System.out.println("ET / (NT + ET): " + (entry.entrapmentProteinCount * 100.0 / (entry.targetProteinCount + entry.entrapmentProteinCount)) + "%");
+      System.out.println("ET * (1/r) / NT: " + (entry.entrapmentProteinCount * (1 / r) * 100.0 / entry.targetProteinCount) + "%");
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(1);
