@@ -7,8 +7,27 @@ Given each protein in a target database, digest it, shuffle the peptides, and th
 Usage:
 ```shell
 java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix> <add prefix>
-Example: java -cp EntrapBench.jar entrapment.GenerateDatabase uniprot_human.fasta KR P 1 10 entrapment 0 # Each target protein generates 10 shuffled entrapment proteins.
+Example: java -cp EntrapBench.jar entrapment.GenerateDatabase uniprot_human.fasta KR P 1 5 entrapment 0 # Each target protein generates 5 different shuffled entrapment proteins.
 ```
+
+Target+entrapment FASTA file example
+<pre>
+<code>
+>sp|A0A2R8Y619|H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=H2BK1 PE=3 SV=1
+MSAEYGQRQQPGGRGGRSSGNKKSKKRCRRKESYSMYIYKVLKQVHPDIGISAKAMSIMNSFVNDVFEQLACEAARLAQYSGRTTLTSREVQTAVRLLLPGELAKHAVSEGTKAVTKYTSSK
+>sp|<mark>entrapment_0</mark>_A0A2R8Y619|<mark>entrapment_0</mark>_H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=<mark>entrapment_0</mark>_H2BK1 PE=3 SV=1
+MGQASYERPQGGQRGGRSNSGKKSKKRCRRKYYSMSIEYKVLKSGIDQAPHIVKCESMVQVLDSEANMANIFAFARSGALYQRLTTSTRAVVETQRALPGLLLEKATHEGSVKATVKYSTSK
+>sp|<mark>entrapment_1</mark>_A0A2R8Y619|<mark>entrapment_1</mark>_H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=<mark>entrapment_1</mark>_H2BK1 PE=3 SV=1
+MSAQYEGRGQPQGRGGRNGSSKKSKKRCRRKSSYIYYMEKVLKAIHDPGSIQVKCLEAANASEVFDSANIQMFMVRLAGYQSRSTLTTREVVTQARLPALLEGLKSHAGVTEKAVTKSSTYK
+>sp|<mark>entrapment_2</mark>_A0A2R8Y619|<mark>entrapment_2</mark>_H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=<mark>entrapment_2</mark>_H2BK1 PE=3 SV=1
+MSQEGYARGPGQQRGGRNGSSKKSKKRCRRKSYEYYMSIKVLKGHQIDISAVPKFNVASLQEASCAENMIMFAVDRLGQSYARTLSTTREVQATVRLALLEGPLKGAHEVTSKATVKSSTYK
+>sp|<mark>entrapment_3</mark>_A0A2R8Y619|<mark>entrapment_3</mark>_H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=<mark>entrapment_3</mark>_H2BK1 PE=3 SV=1
+MAGESQYRGQPGQRGGRSNSGKKSKKRCRRKYIMSYESYKVLKQGIDAHPVSIKADQFEIMAFNNVMVCAESSLARASQLGYRSTLTTRVAQEVTRALGPLLLEKEASVTHGKTAVKYSTSK
+>sp|<mark>entrapment_4</mark>_A0A2R8Y619|<mark>entrapment_4</mark>_H2BK1_HUMAN Histone H2B type 2-K1 OS=Homo sapiens OX=9606 GN=<mark>entrapment_4</mark>_H2BK1 PE=3 SV=1
+MEQSYGARQGQGPRGGRSGNSKKSKKRCRRKEYYSMSYIKVLKIHGSVQDPAIKFECQSANLIEVSAAVDNMAFMRQGLYSARTSTTLRQVETAVRLALLGPELKVATHEGSKATVKYSSTK
+</code>
+</pre>
+
 
 ### Calculate false discovery proportion (FDP)
 Given a target+entrapment database and DIA-NN's `report.tsv`, calculate the false discovery proportion related estimations using the equations in [Wen et al. (2024)](https://doi.org/10.1101/2024.06.01.596967)
