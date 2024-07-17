@@ -32,15 +32,21 @@ MEQSYGARQGQGPRGGRSGNSKKSKKRCRRKEYYSMSYIKVLKIHGSVQDPAIKFECQSANLIEVSAAVDNMAFMRQGLY
 ### Calculate false discovery proportion (FDP)
 Given a target+entrapment database and DIA-NN's `report.tsv`, calculate the false discovery proportion related estimations using the equations in [Wen et al. (2024)](https://doi.org/10.1101/2024.06.01.596967)
 
-"combined" method: $$FDP = \frac{E \times (1 + 1/r)}{T + E}$$
+"combined" method: 
 
-Lower bound: $$FDP = \frac{E}{T + E}$$
+$$FDP = \frac{E \times (1 + 1/r)}{T + E}$$
 
-"sample" method: $$FDP = \frac{E \times (1/r)}{T}$$
+Lower bound: 
+
+$$FDP = \frac{E}{T + E}$$
+
+"sample" method: 
+
+$$FDP = \frac{E \times (1/r)}{T}$$
 
 where $T$ is the number of target proteins/precursors in the result, $E$ is the number of entrapment proteins/precursors in the result, $r$ is the ratio of entrapment and target proteins in the database.
 
-`_Disclaimer: The equation may be slightly different depending on different target-decoy approaches and the interpretations of the false matches._`
+_Disclaimer: The equation may be slightly different depending on different target-decoy approaches and the interpretations of the false matches._
 
 Usage:
 ```shell
