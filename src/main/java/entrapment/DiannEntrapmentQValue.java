@@ -35,11 +35,11 @@ public class DiannEntrapmentQValue {
 
   public static void main(String[] args) {
     if (args.length != 8) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue <entrapment prefix> <entrapment to target ratio> <run-wise precursor q-value threshold> <global precursor q-value threshold> <run-wise protein q-value threshold> <global protein q-value threshold> <result file path> <output file path>\n");
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.DiannEntrapmentQValue <entrapment style> <entrapment to target ratio> <run-wise precursor q-value threshold> <global precursor q-value threshold> <run-wise protein q-value threshold> <global protein q-value threshold> <result file path> <output file path>\n");
       System.exit(1);
     }
 
-    String entrapmentPrefix = args[0];
+    int entrapmentStyle = Integer.parseInt(args[0]);
     double r = Double.parseDouble(args[1]);
     double runPrecursorQValueT = Double.parseDouble(args[2]);
     double globalPrecursorQValueT = Double.parseDouble(args[3]);
@@ -48,13 +48,20 @@ public class DiannEntrapmentQValue {
     Path resultPath = Paths.get(args[6]);
     Path outputPath = Paths.get(args[7]);
 
+    if (entrapmentStyle != 0 && entrapmentStyle != 1) {
+      System.out.println("The entrapment style " + entrapmentStyle + " is not supported.");
+      System.exit(1);
+    }
+
+    String entrapmentMarker = entrapmentStyle == 0 ? "entrapment_" : "_p_target";
+
     if (!Files.exists(resultPath) || !Files.isWritable(resultPath) || !Files.isRegularFile(resultPath)) {
       System.out.println("The result file " + args[1] + " is not valid.");
       System.exit(1);
     }
 
     try {
-      Entry entry = calculate(resultPath, entrapmentPrefix, runPrecursorQValueT, globalPrecursorQValueT, runPGQValueT, globalPGQValueT);
+      Entry entry = calculate(resultPath, entrapmentMarker, runPrecursorQValueT, globalPrecursorQValueT, runPGQValueT, globalPGQValueT);
 
       BufferedWriter writer = Files.newBufferedWriter(outputPath);
       writer.write("cscore_threshold,target_count,decoy_count,entrapment_target_count,entrapment_decoy_count,reported_run_precursor_Q_value,reported_global_precursor_Q_value,entrapment_Q_value\n");
@@ -90,7 +97,7 @@ public class DiannEntrapmentQValue {
     }
   }
 
-  private static Entry calculate(Path resultPath, String entrapmentPrefix, double runPrecursorQValueT, double globalPrecursorQValueT, double runPGQValueT, double globalPGQValueT) throws Exception {
+  private static Entry calculate(Path resultPath, String entrapmentMarker, double runPrecursorQValueT, double globalPrecursorQValueT, double runPGQValueT, double globalPGQValueT) throws Exception {
     long[] targetCounts = new long[(int) (1 / binSize) + 1];
     long[] decoyCounts = new long[(int) (1 / binSize) + 1];
     long[] entrapmentTargetCounts = new long[(int) (1 / binSize) + 1];
@@ -161,7 +168,7 @@ public class DiannEntrapmentQValue {
         String[] parts2 = pg.split(";");
         boolean isEntrapment = true;
         for (String p : parts2) {
-          if (!p.contains(entrapmentPrefix)) { // As long as there is a non-entrapment protein, it is not an entrapment.
+          if (!p.contains(entrapmentMarker)) { // As long as there is a non-entrapment protein, it is not an entrapment.
             isEntrapment = false;
             break;
           }

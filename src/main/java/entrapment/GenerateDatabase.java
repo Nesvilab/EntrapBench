@@ -39,8 +39,8 @@ public class GenerateDatabase {
   private static final Pattern pattern2 = Pattern.compile("GN=([^ ]+)");
 
   public static void main(String[] args) {
-    if (args.length != 7) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment prefix> <add prefix>");
+    if (args.length != 6) {
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment style>");
       System.exit(1);
     }
 
@@ -48,15 +48,12 @@ public class GenerateDatabase {
     String cutSites = args[1];
     String protectSites = args[2];
     boolean cleavageFromCTerm = args[3].contentEquals("1");
-    int N = 10;
-    String prefix = args[5];
-    boolean addPrefix = args[6].contentEquals("1");
+    int N = Integer.parseInt(args[4]);
+    int entrapmentStyle = Integer.parseInt(args[5]);
 
-    try {
-      N = Integer.parseInt(args[4]);
-    } catch (Exception e) {
-      System.out.println("The last argument must be an integer.");
-      System.exit(1);
+    if (entrapmentStyle == 1 && N != 1) {
+      N = 1;
+      System.out.println("The number of entrapment proteins for each target protein is set to 1.");
     }
 
     if (!Files.exists(fastaPath) || !Files.isReadable(fastaPath) || !Files.isRegularFile(fastaPath)) {
@@ -80,7 +77,7 @@ public class GenerateDatabase {
 
         if (line.startsWith(">")) {
           if (sequence.length() > 0) {
-            writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix, addPrefix);
+            writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
           }
           sequence = new StringBuilder();
           header = line.substring(1);
@@ -90,7 +87,7 @@ public class GenerateDatabase {
       }
 
       if (sequence.length() > 0) {
-        writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, prefix, addPrefix);
+        writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
       }
 
       reader.close();
@@ -102,9 +99,11 @@ public class GenerateDatabase {
 
   }
 
-  private static void writeProtein(BufferedWriter writer, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, String prefix, boolean addPrefix) throws Exception {
+  private static void writeProtein(BufferedWriter writer, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, int entrapmentStyle) throws Exception {
+    String sequence2 = sequence.toString().replaceAll("I", "L");
+
     writer.write(">" + header + "\n");
-    writer.write(sequence + "\n");
+    writer.write(sequence2 + "\n");
 
     String part1;
     String part2;
@@ -128,9 +127,9 @@ public class GenerateDatabase {
       }
     }
 
-    String[] shuffledProteins = shuffleSeqFY(sequence.toString(), cutSites, protectSites, cleavageFromCTerm, N);
+    String[] shuffledProteins = shuffleSeqFY(sequence2, cutSites, protectSites, cleavageFromCTerm, N);
     for (int i = 0; i < shuffledProteins.length; ++i) {
-      writer.write(">" + (addPrefix ? appendPrefix(prefix, i, part1) : part1) + "|" + appendPrefix(prefix, i, part2) + (part3 == null ? "" : "|" + appendPrefix(prefix, i, part3)) + (part4 == null ? "" : " " + replaceGN(prefix, i, part4)) + "\n");
+      writer.write(">" + appendEntrapmentMarker(entrapmentStyle, i, part1) + "|" + appendEntrapmentMarker(entrapmentStyle, i, part2) + (part3 == null ? "" : "|" + appendEntrapmentMarker(entrapmentStyle, i, part3)) + (part4 == null ? "" : " " + replaceGN(entrapmentStyle, i, part4)) + "\n");
       writer.write(shuffledProteins[i] + "\n");
     }
   }
@@ -210,14 +209,16 @@ public class GenerateDatabase {
     return output;
   }
 
-  private static String appendPrefix(String prefix, int i, String s) {
-    return prefix + "_" + i + "_" + s;
+  private static String appendEntrapmentMarker(int entrapmentStyle, int i, String s) {
+    return entrapmentStyle == 0 ? "entrapment_" + i + "_" + s : s + "_p_target";
   }
 
-  private static String replaceGN(String prefix, int i, String s) {
+  private static String replaceGN(int entrapmentStyle, int i, String s) {
     Matcher matcher = pattern2.matcher(s);
     if (matcher.find()) {
-      return matcher.replaceFirst("GN=" + prefix + "_" + i + "_" + matcher.group(1));
+      return entrapmentStyle == 0 ?
+          matcher.replaceFirst("GN=entrapment_" + i + "_" + matcher.group(1)) :
+          matcher.replaceFirst("GN=" + matcher.group(1) + "_p_target");
     } else {
       return s;
     }

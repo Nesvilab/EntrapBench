@@ -31,17 +31,24 @@ public class CalculateFDP {
 
   public static void main(String[] args) {
     if (args.length != 7) {
-      System.out.println("Usage: java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <entrapment prefix> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>");
+      System.out.println("Usage: java -cp EntrapBench.jar entrapment.CalculateFDP <fasta file path> <entrapment style> <result file path> <run precursor FDR> <global precursor FDR> <run protein group FDR> <global protein group FDR>");
       System.exit(1);
     }
 
     Path fastaPath = Paths.get(args[0]);
-    String entrapmentPrefix = args[1];
+    int entrapmentStyle = Integer.parseInt(args[1]);
     Path resultPath = Paths.get(args[2]);
     double runPrecursorFdrT = Double.parseDouble(args[3]);
     double globalPrecursorFdrT = Double.parseDouble(args[4]);
     double runPGFdrT = Double.parseDouble(args[5]);
     double globalPGFdrT = Double.parseDouble(args[6]);
+
+    if (entrapmentStyle != 0 && entrapmentStyle != 1) {
+      System.out.println("Unknown entrapment style.");
+      System.exit(1);
+    }
+
+    String entrapmentMarker = entrapmentStyle == 0 ? "entrapment_" : "_p_target";
 
     if (!Files.exists(fastaPath) || !Files.isReadable(fastaPath) || !Files.isRegularFile(fastaPath)) {
       System.out.println("The fasta file " + args[0] + " is not valid.");
@@ -54,8 +61,8 @@ public class CalculateFDP {
     }
 
     try {
-      Entry1 entry1 = summaryEntrapments(fastaPath, entrapmentPrefix);
-      Entry2 entry2 = diannParser(resultPath, entrapmentPrefix, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
+      Entry1 entry1 = summaryEntrapments(fastaPath, entrapmentMarker);
+      Entry2 entry2 = diannParser(resultPath, entrapmentMarker, runPrecursorFdrT, globalPrecursorFdrT, runPGFdrT, globalPGFdrT);
       double r = (double) entry1.entrapmentProteinCount / (double) entry1.nonEntrapmentProteinCount;
 
       System.out.println("Non-entrapment proteins in the database: " + entry1.nonEntrapmentProteinCount);
@@ -87,7 +94,7 @@ public class CalculateFDP {
 
   }
 
-  private static Entry1 summaryEntrapments(Path fastaPath, String entrapmentPrefix) throws Exception {
+  private static Entry1 summaryEntrapments(Path fastaPath, String entrapmentMarker) throws Exception {
     String line;
     BufferedReader reader = new BufferedReader(new FileReader(fastaPath.toFile()));
     long entrapmentProteinCount = 0;
@@ -95,7 +102,7 @@ public class CalculateFDP {
     while ((line = reader.readLine()) != null) {
       line = line.trim();
       if (line.startsWith(">")) {
-        if (line.contains(entrapmentPrefix)) {
+        if (line.contains(entrapmentMarker)) {
           ++entrapmentProteinCount;
         } else {
           ++nonEntrapmentProteinCount;
@@ -107,7 +114,7 @@ public class CalculateFDP {
     return new Entry1(nonEntrapmentProteinCount, entrapmentProteinCount);
   }
 
-  private static Entry2 diannParser(Path resultPath, String entrapmentPrefix, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
+  private static Entry2 diannParser(Path resultPath, String entrapmentMarker, double runPrecursorFdrT, double globalPrecursorFdrT, double runPGFdrT, double globalPGFdrT) throws Exception {
     long targetPrecursorCount = 0, entrapmentPrecursorCount = 0, decoyPrecursorCount = 0, decoyEntrapmentPrecursorCount = 0;
     Set<String> targetProteins = new HashSet<>(), entrapmentProteins = new HashSet<>();
     String line;
@@ -170,7 +177,7 @@ public class CalculateFDP {
         String[] parts2 = pg.split(";");
         boolean isEntrapment = true;
         for (String p : parts2) {
-          if (!p.contains(entrapmentPrefix)) { // As long as there is a non-entrapment protein, it is not an entrapment.
+          if (!p.contains(entrapmentMarker)) { // As long as there is a non-entrapment protein, it is not an entrapment.
             isEntrapment = false;
             break;
           }
