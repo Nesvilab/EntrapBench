@@ -41,6 +41,7 @@ public class GenerateDatabase {
   public static void main(String[] args) {
     if (args.length != 6) {
       System.out.println("Usage: java -cp EntrapBench.jar entrapment.GenerateDatabase <UniProt fasta file path> <cut sites> <protect sites> <cleavage from C-term: 0=false, 1 = true> <number of entrapment proteins for each target protein> <entrapment style>");
+      System.out.println("entrapment style: 0 = add \"entrapment_\" prefix to the protein ID, 1 = add \"_p_target\" suffix to the protein ID which is used by https://doi.org/10.1038/s41592-025-02719-x");
       System.exit(1);
     }
 
@@ -60,12 +61,24 @@ public class GenerateDatabase {
       System.out.println("The fasta file " + args[0] + " is not valid.");
       System.exit(1);
     }
+    String outputFile1 = fastaPath.getParent().resolve("target_shuffle_" + fastaPath.getFileName()).toAbsolutePath().toString();
+    String outputFile2 = fastaPath.getParent().resolve("target_shuffle_pep_" + fastaPath.getFileName()).toAbsolutePath().toString();
 
-    String outputFile = fastaPath.getParent().resolve("target_shuffle_" + fastaPath.getFileName()).toAbsolutePath().toString();
+    if (Files.exists(Paths.get(outputFile1))) {
+      System.out.println("The output file " + outputFile1 + " already exists.");
+      System.exit(1);
+    }
+
+    if (Files.exists(Paths.get(outputFile2))) {
+      System.out.println("The output file " + outputFile2 + " already exists.");
+      System.exit(1);
+    }
 
     try {
       String line;
-      BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+      BufferedWriter writer1 = new BufferedWriter(new FileWriter(outputFile1));
+      BufferedWriter writer2 = new BufferedWriter(new FileWriter(outputFile2));
+
       BufferedReader reader = new BufferedReader(new FileReader(fastaPath.toFile()));
       String header = null;
       StringBuilder sequence = new StringBuilder();
@@ -77,7 +90,7 @@ public class GenerateDatabase {
 
         if (line.startsWith(">")) {
           if (sequence.length() > 0) {
-            writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
+            writeProtein(writer1, writer2, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
           }
           sequence = new StringBuilder();
           header = line.substring(1);
@@ -87,11 +100,12 @@ public class GenerateDatabase {
       }
 
       if (sequence.length() > 0) {
-        writeProtein(writer, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
+        writeProtein(writer1, writer2, header, sequence, cutSites, protectSites, cleavageFromCTerm, N, entrapmentStyle);
       }
 
       reader.close();
-      writer.close();
+      writer1.close();
+      writer2.close();
     } catch (Exception ex) {
       ex.printStackTrace();
       System.exit(1);
@@ -99,11 +113,47 @@ public class GenerateDatabase {
 
   }
 
-  private static void writeProtein(BufferedWriter writer, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, int entrapmentStyle) throws Exception {
+  public static void writePeptide(BufferedWriter writer2, String tt, String ee, String cleavageSite, String protectionSite, boolean cleavageFromCTerm) throws Exception {
+    Pattern digestSitePattern = getDigestSitePattern(cleavageSite, protectionSite, cleavageFromCTerm);
+    Set<Integer> cutSiteSet = new HashSet<>();
+    cutSiteSet.add(0);
+    cutSiteSet.add(tt.length());
+    Matcher matcher = digestSitePattern.matcher(tt);
+    while (matcher.find()) {
+      cutSiteSet.add(matcher.start() + 1);
+    }
+    Integer[] cutSiteArray = cutSiteSet.toArray(new Integer[0]);
+    Arrays.sort(cutSiteArray);
+
+    for (int i = 0; i < cutSiteArray.length - 1; ++i) {
+      String t = tt.substring(cutSiteArray[i], Math.min(cutSiteArray[i + 1], tt.length()));
+      String e = ee.substring(cutSiteArray[i], Math.min(cutSiteArray[i + 1], ee.length()));
+      // default peptide length range used by https://github.com/Noble-Lab/FDRBench
+      if (t.length() >= 7 && t.length() <= 35) {
+        writer2.write(">sp|" + t + "_target|" + t + "_target\n");
+        writer2.write(t + "\n");
+        writer2.write(">sp|" + e + "_p_target|" + e + "_p_target\n");
+        writer2.write(e + "\n");
+      }
+      if (i + 2 < cutSiteArray.length) {
+        t = tt.substring(cutSiteArray[i], Math.min(cutSiteArray[i + 2], tt.length()));
+        e = ee.substring(cutSiteArray[i], Math.min(cutSiteArray[i + 2], ee.length()));
+        // default peptide length range used by https://github.com/Noble-Lab/FDRBench
+        if (t.length() >= 7 && t.length() <= 35) {
+          writer2.write(">sp|" + t + "_target|" + t + "_target\n");
+          writer2.write(t + "\n");
+          writer2.write(">sp|" + e + "_p_target|" + e + "_p_target\n");
+          writer2.write(e + "\n");
+        }
+      }
+    }
+  }
+
+  private static void writeProtein(BufferedWriter writer1, BufferedWriter writer2, String header, StringBuilder sequence, String cutSites, String protectSites, boolean cleavageFromCTerm, int N, int entrapmentStyle) throws Exception {
     String sequence2 = sequence.toString().replaceAll("I", "L");
 
-    writer.write(">" + header + "\n");
-    writer.write(sequence2 + "\n");
+    writer1.write(">" + header + "\n");
+    writer1.write(sequence2 + "\n");
 
     String part1;
     String part2;
@@ -129,8 +179,12 @@ public class GenerateDatabase {
 
     String[] shuffledProteins = shuffleSeqFY(sequence2, cutSites, protectSites, cleavageFromCTerm, N);
     for (int i = 0; i < shuffledProteins.length; ++i) {
-      writer.write(">" + appendEntrapmentMarker(entrapmentStyle, i, part1) + "|" + appendEntrapmentMarker(entrapmentStyle, i, part2) + (part3 == null ? "" : "|" + appendEntrapmentMarker(entrapmentStyle, i, part3)) + (part4 == null ? "" : " " + replaceGN(entrapmentStyle, i, part4)) + "\n");
-      writer.write(shuffledProteins[i] + "\n");
+      writer1.write(">" + appendEntrapmentMarker(entrapmentStyle, i, part1) + "|" + appendEntrapmentMarker(entrapmentStyle, i, part2) + (part3 == null ? "" : "|" + appendEntrapmentMarker(entrapmentStyle, i, part3)) + (part4 == null ? "" : " " + replaceGN(entrapmentStyle, i, part4)) + "\n");
+      writer1.write(shuffledProteins[i] + "\n");
+    }
+
+    if (entrapmentStyle == 1) {
+      writePeptide(writer2, sequence2, shuffledProteins[0], cutSites, protectSites, cleavageFromCTerm);
     }
   }
 
